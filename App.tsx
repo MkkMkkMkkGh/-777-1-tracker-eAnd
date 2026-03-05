@@ -357,7 +357,7 @@ function EtisalatSmsDetector() {
         PermissionsAndroid.PERMISSIONS.READ_SMS,
         PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
       ];
-      if (Platform.Version >= 33) {
+      if (Number(Platform.Version) >= 33) {
         permissions.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
       }
       const results = await PermissionsAndroid.requestMultiple(permissions);
