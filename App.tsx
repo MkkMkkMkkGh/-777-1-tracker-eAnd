@@ -547,14 +547,18 @@ const styles = StyleSheet.create({
     color: '#7A8090',
   },
   cardPrimary: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F2F3F7',
     borderRadius: 28,
     padding: 20,
+    borderWidth: 1,
+    borderColor: '#E1E4EB',
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F2F3F7',
     borderRadius: 22,
     padding: 18,
+    borderWidth: 1,
+    borderColor: '#E1E4EB',
   },
   cardRowBetween: {
     flexDirection: 'row',
