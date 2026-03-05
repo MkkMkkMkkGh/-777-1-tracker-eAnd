@@ -114,6 +114,8 @@ function AppContent() {
           limitUnit={limitUnit}
         />
 
+        <Divider />
+
         <SectionHeader
           title="Session settings"
           hint="Global limit configuration"
@@ -128,8 +130,12 @@ function AppContent() {
           onChangeLimitUnit={setLimitUnit}
         />
 
+        <Divider />
+
         <SectionHeader title="Pricing rules" hint="Etisalat pay-as-you-go" />
         <PricingRules />
+
+        <Divider />
 
         <SectionHeader title="SMS detector" hint="Last Etisalat message" />
         <EtisalatSmsDetector
@@ -175,6 +181,10 @@ function SectionHeader({ title, hint }: { title: string; hint?: string }) {
       {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
     </View>
   );
+}
+
+function Divider() {
+  return <View style={styles.divider} />;
 }
 
 function SessionCard({
@@ -510,6 +520,9 @@ function EtisalatSmsDetector({
 }
 
 const styles = StyleSheet.create({
+  fontFamily: {
+    fontFamily: 'Inter',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F2F3F7',
@@ -526,25 +539,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0C0D12',
     letterSpacing: -0.5,
+    fontFamily: 'Inter',
   },
   headerSubtitle: {
     marginTop: 4,
     fontSize: 16,
     color: '#6C7280',
+    fontFamily: 'Inter',
   },
   sectionHeader: {
-    marginTop: 24,
+    marginTop: 0,
     marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#171922',
+    fontFamily: 'Inter',
   },
   sectionHint: {
     marginTop: 4,
     fontSize: 14,
     color: '#7A8090',
+    fontFamily: 'Inter',
   },
   cardPrimary: {
     backgroundColor: '#F2F3F7',
@@ -560,6 +577,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E1E4EB',
   },
+  divider: {
+    height: 1,
+    backgroundColor: '#E1E4EB',
+    borderRadius: 999,
+    marginTop: 22,
+    marginBottom: 14,
+    marginHorizontal: -20,
+  },
   cardRowBetween: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -571,17 +596,20 @@ const styles = StyleSheet.create({
     color: '#7A8090',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+    fontFamily: 'Inter',
   },
   cardTitle: {
     fontSize: 26,
     fontWeight: '700',
     color: '#0C0D12',
     marginTop: 4,
+    fontFamily: 'Inter',
   },
   cardTitleSmall: {
     fontSize: 15,
     color: '#4B5161',
     marginTop: 4,
+    fontFamily: 'Inter',
   },
   pillButton: {
     paddingHorizontal: 18,
@@ -601,6 +629,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
+    fontFamily: 'Inter',
   },
   metricsRow: {
     flexDirection: 'row',
@@ -616,12 +645,14 @@ const styles = StyleSheet.create({
   metricLabel: {
     fontSize: 12,
     color: '#7A8090',
+    fontFamily: 'Inter',
   },
   metricValue: {
     marginTop: 6,
     fontSize: 18,
     fontWeight: '600',
     color: '#101217',
+    fontFamily: 'Inter',
   },
   remainingCard: {
     marginTop: 16,
@@ -635,6 +666,7 @@ const styles = StyleSheet.create({
   remainingLabel: {
     fontSize: 13,
     color: '#3B4B64',
+    fontFamily: 'Inter',
   },
   remainingLabelDisabled: {
     color: '#7A8090',
@@ -644,6 +676,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#0A5ED7',
+    fontFamily: 'Inter',
   },
   remainingValueDisabled: {
     color: '#8C92A3',
@@ -652,6 +685,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     color: '#5D6A82',
+    fontFamily: 'Inter',
   },
   remainingHintDisabled: {
     color: '#8C92A3',
@@ -668,6 +702,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7A8090',
     marginBottom: 8,
+    fontFamily: 'Inter',
   },
   input: {
     backgroundColor: '#F6F7FB',
@@ -676,6 +711,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#0C0D12',
+    fontFamily: 'Inter',
   },
   unitGroup: {
     flex: 1,
@@ -699,10 +735,12 @@ const styles = StyleSheet.create({
   unitText: {
     fontSize: 13,
     color: '#7A8090',
+    fontFamily: 'Inter',
   },
   unitTextActive: {
     color: '#0A5ED7',
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   ruleRow: {
     flexDirection: 'row',
@@ -713,11 +751,13 @@ const styles = StyleSheet.create({
   ruleLabel: {
     fontSize: 14,
     color: '#5D6576',
+    fontFamily: 'Inter',
   },
   ruleValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#101217',
+    fontFamily: 'Inter',
   },
   smsStatusBadge: {
     minWidth: 64,
@@ -743,6 +783,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#2E3240',
+    fontFamily: 'Inter',
   },
   smsBodyRow: {
     marginTop: 12,
@@ -750,11 +791,13 @@ const styles = StyleSheet.create({
   smsBodyLabel: {
     fontSize: 12,
     color: '#7A8090',
+    fontFamily: 'Inter',
   },
   smsBodyText: {
     marginTop: 6,
     fontSize: 14,
     color: '#1A1D27',
+    fontFamily: 'Inter',
   },
 });
 
