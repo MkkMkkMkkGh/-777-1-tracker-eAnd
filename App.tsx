@@ -62,7 +62,7 @@ function AppContent() {
   const safeAreaInsets = useSafeAreaInsets();
   const [limitValue, setLimitValue] = useState('25');
   const [limitUnit, setLimitUnit] = useState<LimitUnit>('AED');
-  const [autoLimitEnabled, setAutoLimitEnabled] = useState(true);
+  const [autoLimitEnabled, setAutoLimitEnabled] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionStart, setSessionStart] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -105,7 +105,7 @@ function AppContent() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <HeaderSection title="Pay-as-you-go" subtitle="Session guard" />
+        <HeaderSection title="*777* tracker" />
 
         <SessionCard
           sessionActive={sessionActive}
