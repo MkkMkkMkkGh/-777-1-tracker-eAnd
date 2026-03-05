@@ -55,10 +55,9 @@ function App() {
 
 function AppContent() {
   const safeAreaInsets = useSafeAreaInsets();
-  const [autoLimitEnabled, setAutoLimitEnabled] = useState(true);
   const [limitValue, setLimitValue] = useState('25');
   const [limitUnit, setLimitUnit] = useState<LimitUnit>('AED');
-  const [sessionActive, setSessionActive] = useState(true);
+  const [autoLimitEnabled, setAutoLimitEnabled] = useState(true);
 
   const session = useMemo(
     () => ({
@@ -80,9 +79,7 @@ function AppContent() {
       >
         <HeaderSection title="Pay-as-you-go" subtitle="Session guard" />
 
-        <SessionCard
-          sessionActive={sessionActive}
-          onToggleSession={() => setSessionActive(!sessionActive)}
+      <SessionCard
           session={session}
           autoLimitEnabled={autoLimitEnabled}
           limitUnit={limitUnit}
@@ -131,14 +128,10 @@ function SectionHeader({ title, hint }: { title: string; hint?: string }) {
 }
 
 function SessionCard({
-  sessionActive,
-  onToggleSession,
   session,
   autoLimitEnabled,
   limitUnit,
 }: {
-  sessionActive: boolean;
-  onToggleSession: () => void;
   session: { elapsed: string; spend: string; remaining: string };
   autoLimitEnabled: boolean;
   limitUnit: LimitUnit;
@@ -148,22 +141,8 @@ function SessionCard({
       <View style={styles.cardRowBetween}>
         <View>
           <Text style={styles.cardLabel}>Session status</Text>
-          <Text style={styles.cardTitle}>
-            {sessionActive ? 'Active' : 'Inactive'}
-          </Text>
+          <Text style={styles.cardTitle}>Active</Text>
         </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.pillButton,
-            sessionActive ? styles.pillStop : styles.pillStart,
-            pressed && styles.pillPressed,
-          ]}
-          onPress={onToggleSession}
-        >
-          <Text style={styles.pillText}>
-            {sessionActive ? 'Stop' : 'Start'}
-          </Text>
-        </Pressable>
       </View>
 
       <View style={styles.metricsRow}>
