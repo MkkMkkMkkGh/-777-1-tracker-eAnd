@@ -9,6 +9,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   NativeEventEmitter,
   NativeModules,
+  type NativeModule,
   PermissionsAndroid,
   Platform,
   ScrollView,
@@ -33,14 +34,18 @@ type SmsPayload = {
   timestamp?: number;
 };
 
-const SmsModule = NativeModules.SmsModule as
-  | {
-      getStoredLastSms: () => Promise<SmsPayload | null>;
-      getLastSmsFromSender: (sender: string) => Promise<SmsPayload | null>;
-    }
-  | undefined;
+type SmsNativeModule = NativeModule & {
+  getStoredLastSms: () => Promise<SmsPayload | null>;
+  getLastSmsFromSender: (sender: string) => Promise<SmsPayload | null>;
+};
+
+const SmsModule = NativeModules.SmsModule as SmsNativeModule | undefined;
 
 type LimitUnit = 'AED' | 'MIN';
+type SmsStatus = 'one' | 'two' | 'other' | 'none';
+
+const MINIMUM_CHARGE = 0.225;
+const PER_MINUTE_CHARGE = 0.0075;
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -58,15 +63,38 @@ function AppContent() {
   const [limitValue, setLimitValue] = useState('25');
   const [limitUnit, setLimitUnit] = useState<LimitUnit>('AED');
   const [autoLimitEnabled, setAutoLimitEnabled] = useState(true);
+  const [sessionActive, setSessionActive] = useState(false);
+  const [sessionStart, setSessionStart] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
 
-  const session = useMemo(
-    () => ({
-      elapsed: '00:18:42',
-      spend: '0.32',
+  useEffect(() => {
+    if (!sessionActive || sessionStart === null) {
+      return;
+    }
+    const tick = () => setElapsedMs(Math.max(0, Date.now() - sessionStart));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [sessionActive, sessionStart]);
+
+  const session = useMemo(() => {
+    const totalSeconds = Math.floor(elapsedMs / 1000);
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
+      2,
+      '0',
+    );
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+    const minutesElapsed = Math.floor(totalSeconds / 60);
+    const spendValue = sessionActive
+      ? MINIMUM_CHARGE + minutesElapsed * PER_MINUTE_CHARGE
+      : 0;
+    return {
+      elapsed: `${hours}:${minutes}:${seconds}`,
+      spend: spendValue.toFixed(3),
       remaining: limitValue || '0',
-    }),
-    [limitValue],
-  );
+    };
+  }, [elapsedMs, limitValue, sessionActive]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -79,7 +107,8 @@ function AppContent() {
       >
         <HeaderSection title="Pay-as-you-go" subtitle="Session guard" />
 
-      <SessionCard
+        <SessionCard
+          sessionActive={sessionActive}
           session={session}
           autoLimitEnabled={autoLimitEnabled}
           limitUnit={limitUnit}
@@ -103,7 +132,20 @@ function AppContent() {
         <PricingRules />
 
         <SectionHeader title="SMS detector" hint="Last Etisalat message" />
-        <EtisalatSmsDetector />
+        <EtisalatSmsDetector
+          onStatusChange={(status, message) => {
+            if (status === 'one') {
+              const startTime = message?.timestamp ?? Date.now();
+              setSessionActive(true);
+              setSessionStart(startTime);
+              setElapsedMs(Math.max(0, Date.now() - startTime));
+            } else if (status === 'two') {
+              setSessionActive(false);
+              setSessionStart(null);
+              setElapsedMs(0);
+            }
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -128,10 +170,12 @@ function SectionHeader({ title, hint }: { title: string; hint?: string }) {
 }
 
 function SessionCard({
+  sessionActive,
   session,
   autoLimitEnabled,
   limitUnit,
 }: {
+  sessionActive: boolean;
   session: { elapsed: string; spend: string; remaining: string };
   autoLimitEnabled: boolean;
   limitUnit: LimitUnit;
@@ -141,7 +185,9 @@ function SessionCard({
       <View style={styles.cardRowBetween}>
         <View>
           <Text style={styles.cardLabel}>Session status</Text>
-          <Text style={styles.cardTitle}>Active</Text>
+          <Text style={styles.cardTitle}>
+            {sessionActive ? 'Active' : 'Inactive'}
+          </Text>
         </View>
       </View>
 
@@ -316,8 +362,12 @@ function PricingRules() {
   );
 }
 
-function EtisalatSmsDetector() {
-  const [status, setStatus] = useState<'one' | 'two' | 'other' | 'none'>('none');
+function EtisalatSmsDetector({
+  onStatusChange,
+}: {
+  onStatusChange: (status: SmsStatus, message: SmsPayload | null) => void;
+}) {
+  const [status, setStatus] = useState<SmsStatus>('none');
   const [lastMessage, setLastMessage] = useState<SmsPayload | null>(null);
   const [permissionState, setPermissionState] = useState<
     'unknown' | 'granted' | 'denied'
@@ -336,7 +386,11 @@ function EtisalatSmsDetector() {
         PermissionsAndroid.PERMISSIONS.READ_SMS,
         PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
       ];
-      if (Number(Platform.Version) >= 33) {
+      const androidApiLevel =
+        Platform.OS === 'android' && typeof Platform.Version === 'number'
+          ? Platform.Version
+          : 0;
+      if (androidApiLevel >= 33) {
         permissions.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
       }
       const results = await PermissionsAndroid.requestMultiple(permissions);
@@ -350,18 +404,21 @@ function EtisalatSmsDetector() {
     };
 
     const classifyMessage = (message: SmsPayload | null) => {
+      let nextStatus: SmsStatus = 'none';
       if (!message) {
-        setStatus('none');
-        return;
-      }
-      const normalized = message.body?.trim().toLowerCase() ?? '';
-      if (normalized === 'one') {
-        setStatus('one');
-      } else if (normalized === 'two') {
-        setStatus('two');
+        nextStatus = 'none';
       } else {
-        setStatus('other');
+        const normalized = message.body?.trim().toLowerCase() ?? '';
+        if (normalized === 'one') {
+          nextStatus = 'one';
+        } else if (normalized === 'two') {
+          nextStatus = 'two';
+        } else {
+          nextStatus = 'other';
+        }
       }
+      setStatus(nextStatus);
+      onStatusChange(nextStatus, message);
     };
 
     const start = async () => {
