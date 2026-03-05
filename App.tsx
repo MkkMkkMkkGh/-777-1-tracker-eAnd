@@ -151,11 +151,19 @@ function AppContent() {
   );
 }
 
-function HeaderSection({ title, subtitle }: { title: string; subtitle: string }) {
+function HeaderSection({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>{title}</Text>
-      <Text style={styles.headerSubtitle}>{subtitle}</Text>
+      {subtitle ? (
+        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+      ) : null}
     </View>
   );
 }
