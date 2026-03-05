@@ -5,8 +5,12 @@
  * @format
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  NativeEventEmitter,
+  NativeModules,
+  PermissionsAndroid,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -22,6 +26,19 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+
+type SmsPayload = {
+  sender?: string;
+  body?: string;
+  timestamp?: number;
+};
+
+const SmsModule = NativeModules.SmsModule as
+  | {
+      getStoredLastSms: () => Promise<SmsPayload | null>;
+      getLastSmsFromSender: (sender: string) => Promise<SmsPayload | null>;
+    }
+  | undefined;
 
 type LimitUnit = 'AED' | 'MIN';
 
@@ -87,6 +104,9 @@ function AppContent() {
 
         <SectionHeader title="Pricing rules" hint="Etisalat pay-as-you-go" />
         <PricingRules />
+
+        <SectionHeader title="SMS detector" hint="Last Etisalat message" />
+        <EtisalatSmsDetector />
       </ScrollView>
     </SafeAreaView>
   );
@@ -317,6 +337,134 @@ function PricingRules() {
   );
 }
 
+function EtisalatSmsDetector() {
+  const [status, setStatus] = useState<'one' | 'two' | 'other' | 'none'>('none');
+  const [lastMessage, setLastMessage] = useState<SmsPayload | null>(null);
+  const [permissionState, setPermissionState] = useState<
+    'unknown' | 'granted' | 'denied'
+  >('unknown');
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    let isMounted = true;
+    const emitter = SmsModule ? new NativeEventEmitter(SmsModule) : null;
+
+    const requestPermissions = async () => {
+      const permissions = [
+        PermissionsAndroid.PERMISSIONS.READ_SMS,
+        PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+      ];
+      if (Platform.Version >= 33) {
+        permissions.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+      }
+      const results = await PermissionsAndroid.requestMultiple(permissions);
+      const granted =
+        results[PermissionsAndroid.PERMISSIONS.READ_SMS] ===
+          PermissionsAndroid.RESULTS.GRANTED &&
+        results[PermissionsAndroid.PERMISSIONS.RECEIVE_SMS] ===
+          PermissionsAndroid.RESULTS.GRANTED;
+      setPermissionState(granted ? 'granted' : 'denied');
+      return granted;
+    };
+
+    const classifyMessage = (message: SmsPayload | null) => {
+      if (!message) {
+        setStatus('none');
+        return;
+      }
+      const normalized = message.body?.trim().toLowerCase() ?? '';
+      if (normalized === 'one') {
+        setStatus('one');
+      } else if (normalized === 'two') {
+        setStatus('two');
+      } else {
+        setStatus('other');
+      }
+    };
+
+    const start = async () => {
+      const granted = await requestPermissions();
+      if (!granted) {
+        return;
+      }
+      if (SmsModule?.getStoredLastSms) {
+        const stored = await SmsModule.getStoredLastSms();
+        if (isMounted && stored) {
+          setLastMessage(stored);
+          classifyMessage(stored);
+        }
+      }
+      if (SmsModule?.getLastSmsFromSender) {
+        const latest = await SmsModule.getLastSmsFromSender('etisalat');
+        if (isMounted && latest) {
+          setLastMessage(latest);
+          classifyMessage(latest);
+        }
+      }
+    };
+
+    start();
+
+    const subscription = emitter?.addListener(
+      'SmsReceived',
+      (payload: SmsPayload) => {
+        if (!isMounted) {
+          return;
+        }
+        if (payload.sender?.toLowerCase() === 'etisalat') {
+          setLastMessage(payload);
+          classifyMessage(payload);
+        }
+      },
+    );
+
+    return () => {
+      isMounted = false;
+      subscription?.remove();
+    };
+  }, []);
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardRowBetween}>
+        <View>
+          <Text style={styles.cardLabel}>Detector status</Text>
+          <Text style={styles.cardTitleSmall}>
+            {Platform.OS === 'android'
+              ? permissionState === 'granted'
+                ? 'Listening for Etisalat'
+                : permissionState === 'denied'
+                  ? 'SMS permission denied'
+                  : 'Requesting permission'
+              : 'Android only'}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.smsStatusBadge,
+            status === 'one' && styles.smsStatusGood,
+            status === 'two' && styles.smsStatusGoodAlt,
+            status === 'other' && styles.smsStatusWarn,
+            status === 'none' && styles.smsStatusMuted,
+          ]}
+        >
+          <Text style={styles.smsStatusText}>{status.toUpperCase()}</Text>
+        </View>
+      </View>
+
+      <View style={styles.smsBodyRow}>
+        <Text style={styles.smsBodyLabel}>Last message</Text>
+        <Text style={styles.smsBodyText}>
+          {lastMessage?.body ?? 'No Etisalat message found.'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -522,6 +670,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#101217',
+  },
+  smsStatusBadge: {
+    minWidth: 64,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#E6E7EC',
+  },
+  smsStatusGood: {
+    backgroundColor: '#D7F5E8',
+  },
+  smsStatusGoodAlt: {
+    backgroundColor: '#DCE9FF',
+  },
+  smsStatusWarn: {
+    backgroundColor: '#FFE8D2',
+  },
+  smsStatusMuted: {
+    backgroundColor: '#E6E7EC',
+  },
+  smsStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2E3240',
+  },
+  smsBodyRow: {
+    marginTop: 12,
+  },
+  smsBodyLabel: {
+    fontSize: 12,
+    color: '#7A8090',
+  },
+  smsBodyText: {
+    marginTop: 6,
+    fontSize: 14,
+    color: '#1A1D27',
   },
 });
 
