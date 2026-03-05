@@ -24,12 +24,11 @@ class SmsReceiver : BroadcastReceiver() {
 
     val normalized = body.trim().lowercase()
     if (normalized == "one") {
-      NotificationUtils.showPersistent(
-        context,
-        "Etisalat action active",
-        "Persistent action is running.",
-      )
+      SmsSessionStore.setStart(context, timestamp)
+      SmsSessionService.start(context, timestamp)
     } else if (normalized == "two") {
+      SmsSessionStore.clear(context)
+      SmsSessionService.stop(context)
       NotificationUtils.cancelPersistent(context)
     }
   }

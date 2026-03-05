@@ -12,8 +12,21 @@ import com.myfirstapp.R
 object NotificationUtils {
   private const val CHANNEL_ID = "etisalat_sms"
   private const val CHANNEL_NAME = "Etisalat alerts"
-  private const val NOTIFICATION_ID = 1001
-  fun showPersistent(context: Context, title: String, message: String) {
+  const val NOTIFICATION_ID = 1001
+  private const val MINIMUM_CHARGE = 0.225
+  private const val PER_MINUTE_CHARGE = 0.0075
+
+  fun showPersistent(context: Context, elapsedMs: Long) {
+    ensureChannel(context)
+    val notification = buildNotification(context, elapsedMs)
+    NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+  }
+
+  fun cancelPersistent(context: Context) {
+    NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+  }
+
+  fun buildNotification(context: Context, elapsedMs: Long): android.app.Notification {
     ensureChannel(context)
     val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
     val flags =
@@ -25,21 +38,27 @@ object NotificationUtils {
     val pendingIntent = launchIntent?.let {
       PendingIntent.getActivity(context, 0, it, flags)
     }
-    val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+
+    val totalSeconds = (elapsedMs.coerceAtLeast(0L) / 1000).toInt()
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    val elapsed = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    val minutesElapsed = totalSeconds / 60
+    val spend = MINIMUM_CHARGE + (minutesElapsed * PER_MINUTE_CHARGE)
+    val message = "Elapsed $elapsed • Spend AED ${String.format("%.3f", spend)}"
+
+    return NotificationCompat.Builder(context, CHANNEL_ID)
       .setSmallIcon(R.mipmap.ic_launcher)
-      .setContentTitle(title)
+      .setContentTitle("Etisalat session active")
       .setContentText(message)
+      .setStyle(NotificationCompat.BigTextStyle().bigText(message))
       .setOngoing(true)
       .setOnlyAlertOnce(true)
       .setContentIntent(pendingIntent)
       .setAutoCancel(false)
       .setPriority(NotificationCompat.PRIORITY_HIGH)
-
-    NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build())
-  }
-
-  fun cancelPersistent(context: Context) {
-    NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+      .build()
   }
 
   private fun ensureChannel(context: Context) {
