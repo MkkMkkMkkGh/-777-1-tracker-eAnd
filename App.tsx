@@ -5,9 +5,9 @@
  * @format
  */
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  Animated,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Switch,
@@ -24,8 +24,6 @@ import {
 } from 'react-native-safe-area-context';
 
 type LimitUnit = 'AED' | 'MIN';
-const APP_BAR_COLLAPSED_HEIGHT = 64;
-const APP_BAR_EXPANDED_HEIGHT = 156;
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -44,28 +42,6 @@ function AppContent() {
   const [limitValue, setLimitValue] = useState('25');
   const [limitUnit, setLimitUnit] = useState<LimitUnit>('AED');
   const [sessionActive, setSessionActive] = useState(true);
-  const scrollY = useRef(new Animated.Value(0)).current;
-
-  const appBarHeight = scrollY.interpolate({
-    inputRange: [0, 120],
-    outputRange: [APP_BAR_EXPANDED_HEIGHT, APP_BAR_COLLAPSED_HEIGHT],
-    extrapolate: 'clamp',
-  });
-  const expandedTitleOpacity = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-  const condensedTitleOpacity = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const actionRowTranslate = scrollY.interpolate({
-    inputRange: [0, 120],
-    outputRange: [0, -16],
-    extrapolate: 'clamp',
-  });
 
   const session = useMemo(
     () => ({
@@ -78,16 +54,14 @@ function AppContent() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.ScrollView
-        contentContainerStyle={styles.scrollContent}
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: safeAreaInsets.top + 12 },
+        ]}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false },
-        )}
-        scrollEventThrottle={16}
       >
-        <Animated.View style={{ height: appBarHeight }} />
+        <HeaderSection title="Pay-as-you-go" subtitle="Session guard" />
 
         <SessionCard
           sessionActive={sessionActive}
@@ -113,79 +87,17 @@ function AppContent() {
 
         <SectionHeader title="Pricing rules" hint="Etisalat pay-as-you-go" />
         <PricingRules />
-      </Animated.ScrollView>
-
-      <AppBar
-        topInset={safeAreaInsets.top}
-        height={appBarHeight}
-        expandedTitleOpacity={expandedTitleOpacity}
-        condensedTitleOpacity={condensedTitleOpacity}
-        actionRowTranslate={actionRowTranslate}
-      />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-function AppBar({
-  topInset,
-  height,
-  expandedTitleOpacity,
-  condensedTitleOpacity,
-  actionRowTranslate,
-}: {
-  topInset: number;
-  height: Animated.AnimatedInterpolation<number>;
-  expandedTitleOpacity: Animated.AnimatedInterpolation<number>;
-  condensedTitleOpacity: Animated.AnimatedInterpolation<number>;
-  actionRowTranslate: Animated.AnimatedInterpolation<number>;
-}) {
+function HeaderSection({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <Animated.View style={[styles.appBar, { height, paddingTop: topInset }]}>
-      <View style={styles.appBarTopRow}>
-        <Pressable style={styles.appBarIcon}>
-          <Text style={styles.appBarIconText}>≡</Text>
-        </Pressable>
-        <Animated.Text
-          style={[styles.appBarTitleCondensed, { opacity: condensedTitleOpacity }]}
-        >
-          Pay-as-you-go
-        </Animated.Text>
-        <View style={styles.appBarActions}>
-          <Pressable style={styles.appBarAction}>
-            <Text style={styles.appBarActionText}>Help</Text>
-          </Pressable>
-          <Pressable style={styles.appBarAction}>
-            <Text style={styles.appBarActionText}>Settings</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <Animated.View
-        style={[
-          styles.appBarExpanded,
-          {
-            opacity: expandedTitleOpacity,
-            transform: [{ translateY: actionRowTranslate }],
-          },
-        ]}
-      >
-        <Text style={styles.appBarTitleExpanded}>Pay-as-you-go</Text>
-        <Text style={styles.appBarSubtitle}>Session guard</Text>
-        <View style={styles.appBarMetaRow}>
-          <Text style={styles.appBarMeta}>Auto-limit ready</Text>
-          <View style={styles.appBarMetaDot} />
-          <Text style={styles.appBarMeta}>2 rules active</Text>
-        </View>
-        <View style={styles.appBarButtons}>
-          <Pressable style={styles.appBarPrimary}>
-            <Text style={styles.appBarPrimaryText}>View session</Text>
-          </Pressable>
-          <Pressable style={styles.appBarSecondary}>
-            <Text style={styles.appBarSecondaryText}>Usage log</Text>
-          </Pressable>
-        </View>
-      </Animated.View>
-    </Animated.View>
+    <View style={styles.header}>
+      <Text style={styles.headerTitle}>{title}</Text>
+      <Text style={styles.headerSubtitle}>{subtitle}</Text>
+    </View>
   );
 }
 
@@ -414,115 +326,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  appBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#F2F3F7',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E1E3E8',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+  header: {
+    marginBottom: 16,
   },
-  appBarTopRow: {
-    height: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  appBarIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  appBarIconText: {
-    fontSize: 18,
-    color: '#101217',
-    fontWeight: '600',
-  },
-  appBarTitleCondensed: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0C0D12',
-  },
-  appBarActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  appBarAction: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  appBarActionText: {
-    fontSize: 12,
-    color: '#2E3240',
-    fontWeight: '600',
-  },
-  appBarExpanded: {
-    marginTop: 8,
-  },
-  appBarTitleExpanded: {
-    fontSize: 30,
+  headerTitle: {
+    fontSize: 34,
     fontWeight: '700',
     color: '#0C0D12',
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
   },
-  appBarSubtitle: {
+  headerSubtitle: {
     marginTop: 4,
-    fontSize: 15,
+    fontSize: 16,
     color: '#6C7280',
-  },
-  appBarMetaRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  appBarMeta: {
-    fontSize: 12,
-    color: '#5D6576',
-  },
-  appBarMetaDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: '#9AA0AE',
-  },
-  appBarButtons: {
-    marginTop: 12,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  appBarPrimary: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#0A5ED7',
-  },
-  appBarPrimaryText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  appBarSecondary: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D7DAE2',
-  },
-  appBarSecondaryText: {
-    color: '#2E3240',
-    fontWeight: '600',
-    fontSize: 13,
   },
   sectionHeader: {
     marginTop: 24,
